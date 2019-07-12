@@ -17,26 +17,55 @@
     const saveFile = document.getElementById('saveFile');
     const recordedAudio = document.getElementById('recordedAudio');
     const recordedVideo = document.getElementById('recordedVideo');
+    const settingsInputs = document.querySelectorAll('.settings input');
 
     recStart.addEventListener('click', startRecording, false);
     recStop.addEventListener('click', stopRecording, false);
     sendServer.addEventListener('click', sendToServer, false);
+    settingsInputs.forEach(el => el.addEventListener('click', settingsInputClick, false));
 
-    const isVideo = true;
-    const fileName = isVideo ? 'filename.webm' : 'output.wav';
-
-    if (isVideo === true) {
-      recordedAudio.style.display = "none";
-    } else {
-      recordedVideo.style.display = "none";
+    const mediaSettings = {
+      isVideo: true,
+      useFrontCamera: true,
+      echoCancellation: false
     }
 
-    const constraints = { audio: true, video: isVideo };
+    let fileName = mediaSettings.isVideo ? 'video.webm' : 'audio.wav';
     let chunks = [];
     let mediaRecorder;
 
+    function initializeRecorder() {
+      fileName = mediaSettings.isVideo ? 'video.webm' : 'audio.wav';
+      recordedAudio.style.display = mediaSettings.isVideo ? 'none' : 'block';
+      recordedVideo.style.display = mediaSettings.isVideo ? 'block' : 'none';
+    }
+
+    initializeRecorder();
+
+    function settingsInputClick(e) {
+      mediaSettings[e.target.dataset.type] = e.target.checked;
+      initializeRecorder();
+    }
+
+    function getMediaConstraints() {
+      const constraints = { 
+        audio: {
+          echoCancellation: mediaSettings.echoCancellation
+        },
+        video: mediaSettings.isVideo ? {
+          facingMode: mediaSettings.useFrontCamera ? 'user' : 'environment',
+          width: { min: 640, ideal: 1920 },
+          height: { min: 400, ideal: 1080 },
+          aspectRatio: { ideal: 1.7777777778 }, //FHD
+          frameRate: { max: 30 }
+        } : false 
+      };
+
+      return constraints;
+    }
+
     async function startRecording() {
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia(getMediaConstraints());
       processStream(stream);
       ['opacity-50', 'cursor-not-allowed'].forEach(className => {
         recStart.classList.add(className);
@@ -66,7 +95,7 @@
       mediaRecorder.ondataavailable = recorderOnDataAvailable;
       mediaRecorder.start();
 
-      if (isVideo) {
+      if (mediaSettings.isVideo) {
         recordedVideo.srcObject = stream;
       }
     }
@@ -79,7 +108,7 @@
       const blob = new Blob(chunks, { type: blobType });
       const objectURL = URL.createObjectURL(blob);
 
-      if (isVideo) {
+      if (mediaSettings.isVideo) {
         recordedVideo.srcObject = null;
         recordedVideo.src = objectURL;
       } else {
