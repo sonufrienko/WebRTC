@@ -84,8 +84,24 @@
     }
 
     async function sendToServer() {
-      // let formData = new FormData()
-      // formData.append('audio', blob)
+      const blobType = chunks[0].type;
+      const blob = new Blob(chunks, { type: blobType });
+
+      const formData = new FormData();
+      formData.append('rec', blob, fileName);
+
+      try {
+        const response = await fetch('http://localhost:4000/uploads', {
+          method: 'post',
+          body: formData
+        });
+        const json = await response.json();
+        const { filename, size } = json;
+        alert(`Upload success. File: ${filename}, Size: ${(size/1024).toFixed(0)} KB.`);
+        console.log(json);
+      } catch (e) {
+        console.log('Error. ', e);
+      }
     }
 
     function processStream(stream) {
